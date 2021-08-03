@@ -254,14 +254,64 @@ layout: two-cols
 
 ### Deploy `nginx` with ro access to certs and content
 ```bash
-$ podman run -d --name routing --label io.containers.autoupdate=image \
+# podman run -d --name routing --label io.containers.autoupdate=image \
 -p 80:80 \
 -p 443:443 \
 -v nginx:/etc/nginx:ro \
 -v osc-www:/srv/osc-www:ro \
--v /etc/letsencrypt:/etc/letsencrypt:ro nginx:mainline`
+-v /etc/letsencrypt:/etc/letsencrypt:ro docker.io/nginx:mainline`
 ```
+### Deploy a rootless `mariadb` server
 
+```bash
+$ podman run -d --name sx5-db --label io.containers.autoupdate=image \
+-v /home/podman_user/var-lib-mysql:/var/lib/mysql:Z \
+docker.io/mariadb:latest
+```
+### Discuss
+- `--label io.containers.autoupdate=image`
+- `:Z`
+- `:ro`
+---
+layout: two-cols
+---
+### Building your own containers
+
+::right:: 
+
+### make file
+
+---
+layout: center
+---
+## Should you run this manually all the time?
+Probably not...
+### CI/CD
+
+---
+layout: center
+---
+## Gitlab CI at OSC
+### Discuss
+
+---
+layout: center
+--- 
+
+- Daily builds of custom containers
+- Automated testing
+- Automated deployment to staging and prod env
+- Actions per MR/Push
+
+---
+layout: two-cols
+---
+### Example pipeline
+
+::right::
+
+### Build output
+ 
 ---
 <h1 align="center"> Thank you</h1>
 <head>

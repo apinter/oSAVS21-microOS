@@ -21,6 +21,15 @@ background: 'wp.jpg'
 <img src="/os.png" class="m-20 h-40 rounded shadow" align="left" />
 
 ---
+layout: center
+---
+
+## This is a server focused talk
+### For MicroOS desktop check:
+- [Dario's collection](https://dariofaggioli.wordpress.com/2021/06/18/microos-as-your-desktop-prime-time/) `https://dariofaggioli.wordpress.com/2021/06/18/microos-as-your-desktop-prime-time/` and [talk](https://www.youtube.com/watch?v=6F7iCntjWB8) `https://www.youtube.com/watch?v=6F7iCntjWB8`
+- [Richard's talk](https://www.youtube.com/watch?v=cZLckDUDYjw) `https://www.youtube.com/watch?v=cZLckDUDYjw`
+
+---
 layout: intro
 ---
 # Whoami
@@ -34,10 +43,6 @@ layout: intro
 - openSUSE Telegram
 - Tumbleweed user
 - CTO and founder at OpenStorage.io
-
-For MicroOS Desktop talks:
-- [Dario's collection](https://dariofaggioli.wordpress.com/2021/06/18/microos-as-your-desktop-prime-time/) and [talk]()
-- [Richard's talk](https://www.youtube.com/watch?v=cZLckDUDYjw)
 
 ---
 layout: intro
@@ -67,6 +72,7 @@ layout: center
 - Tumbleweed base
 - Simple, minimal, and sleek
 - Container host by design
+- Combustion and Ignition support
 - Transactional-updates, health-checker, rebootmgr 
 - No YaST, but there is Cockpit ;))
 - Not your typical server os
@@ -147,7 +153,7 @@ esac
 
 exit 0
 ```
-### src: [Health-checker Github](https://github.com/kubic-project/health-checker/blob/master/plugins/crio.sh)
+### src: [Health-checker Github](https://github.com/kubic-project/health-checker/blob/master/plugins/crio.sh) `https://github.com/kubic-project/health-checker/blob/master/plugins/crio.sh`
 ---
 layout: center
 ---
@@ -178,7 +184,8 @@ lock-group=default
 ```    
 <br>
 
-#### [rebootmgrd man](https://kubic.opensuse.org/documentation/man-pages/org.opensuse.RebootMgr.conf.8.html)
+#### [rebootmgrd man](https://kubic.opensuse.org/documentation/man-pages/org.opensuse.RebootMgr.conf.8.html) 
+`https://kubic.opensuse.org/documentation/man-pages/org.opensuse.RebootMgr.conf.8.html`
 
 ---
 layout: center
@@ -277,11 +284,20 @@ docker.io/mariadb:latest
 layout: two-cols
 ---
 ### Building your own containers
-
+```bash
+$ podman build -t [tag] .
+```
 ::right:: 
-
 ### make file
-
+```bash
+FROM registry.opensuse.org/opensuse/tumbleweed
+RUN zypper ref; zypper dup -y; \
+    zypper in -y coturn sudo 
+COPY coturn /etc/coturn
+RUN chown -R coturn:coturn /etc/coturn
+EXPOSE 5349 5440
+CMD turnserver -c /etc/coturn/turnserver.conf
+```
 ---
 layout: center
 ---
@@ -321,72 +337,158 @@ layout: center
 ---
 layout: two-cols
 ---
-### Example pipeline
+### Example container build
 
 ```bash
-image: opensuse/tumblweed
-
-stages:     
-  - build
-  - test # there will be one for sure at some point 
-
-build-job:      
-  stage: build
+coturn-sx5-build-master:
+  variables:
+    OSC_REGISTRY: registry.openstorage.io
+    OSC_CONTAINER_NAME: coturn-sx5
   before_script:
-    - zypper ref
-    - zypper install -y npm-default nodejs-common python38 python38-pip openssh-clients
-    - pip install ansible
-    - echo "mywww ansible_host=myhost.com ansible_user=ansible" > /inventory.ini
-    - eval $(ssh-agent -s)
-    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
-    - mkdir -p ~/.ssh; chmod 700 ~/.ssh
-    - mv /builds/host/portal/ansible_deploy.yml /ansible_deploy.yml
+    - podman info
   script:
-    - cd /builds/host/portal/wp-content/themes/host
-    - npm install
-    - npm run build
-    - ansible-playbook -i /inventory.ini /ansible_deploy.yml
+    - podman pull registry.opensuse.org/opensuse/tumbleweed
+    - podman build -t $OSC_REGISTRY/$OSC_CONTAINER_NAME .
+    - podman push $OSC_REGISTRY/$OSC_CONTAINER_NAME --authfile $OSC_REGISTRY_AUTHFILE
+    - podman rmi $OSC_REGISTRY/$OSC_CONTAINER_NAME
+  only:
+    - master
+  retry: 2
 ```
 ::right::
 ### Build output
 
 ```bash
-dist/menu-arrow-purple.86f417ef.svg                                      246 B     690ms
-dist/mobile-menu-arrow-gray.fbf6b7c2.svg                                 246 B     695ms
-dist/single-page-header-mobile.f2e730d5.svg                              243 B     711ms
-dist/partnerships-customer-lifecycle-mobile-arrow.2a60f611.svg           242 B     1.40s
-dist/partnerships-customer-lifecycle-arrow.6474d63b.svg                  236 B     1.38s
-dist/down-arrow-menu.ea22cf62.svg                                        231 B     580ms
-dist/releases-quote-mobile-bg.d74f87e6.svg                               227 B     806ms
-dist/gray-down-arrow-menu.f81a83b6.svg                                   224 B     580ms
-dist/industry-ebook-mobile-bg.a19cb7d7.svg                               223 B     1.31s
-dist/footer-arrow.e4d01d0f.svg                                           223 B     487ms
-dist/industry-case-study-foodbeverage-bg-mobile.24fa8d71.svg             222 B     1.32s
-dist/industry-case-study-mobile-bg.b389a54b.svg                          222 B     1.30s
-dist/back-submenu.f4afcb2a.svg                                           216 B     711ms
-dist/coaltion-gray-bg.01f7d70f.svg                                       171 B     1.68s
-dist/gray-bg.face3d8d.svg                                                171 B     1.67s
-$ touch -a /builds/host/portal/wp-content/themes/host/dist/test
-$ ansible-playbook -i /inventory.ini /ansible_deploy.yml
-PLAY [host.com deployment] ***************************************************
-TASK [Deploy the updated WP] ***************************************************
+$ podman push $OSC_REGISTRY/$OSC_CONTAINER_NAME --authfile $OSC_REGISTRY_AUTHFILE
+Getting image source signatures
+Copying blob sha256:1ff05b98b1b9982471103ab81f0c16112cabf1d93792d16c5522d416c1d09bb6
+Copying blob sha256:dbc5f6b930257df4f84d3f385e4c530106105f58e61761f4c9a67c2eb34052af
+Copying blob sha256:2366142f151499d3461849cae503d599c81eaaece4a4becdbafb6d444964c5eb
+Copying blob sha256:9d7a5c4b0dd37014713a0175d1fb97b690f7cc610b5a9d86b06bdfeeb059031b
+Copying config sha256:39d8eeecb72633d9e9409ddcf056cac6f5e32e2bc418aa63f02e47f45a8185ca
+Writing manifest to image destination
+Storing signatures
+$ podman rmi $OSC_REGISTRY/$OSC_CONTAINER_NAME
+Untagged: registry.openstorage.io/coturn-sx5:latest
+Deleted: 39d8eeecb72633d9e9409ddcf056cac6f5e32e2bc418aa63f02e47f45a8185ca
 Cleaning up file based variables
-00:01
+00:00
 Job succeeded
 ```
+
+---
+layout: two-cols
+---
+### Something a little more complex
+
+```bash
+image: opensuse/leap
+
+stages:     
+  - build
+  - deploy
+  - test # there will be one for sure at some point 
+
+build-job:
+  variables:
+    GIT_STRATEGY: fetch
+    GIT_CHECKOUT: "false" 
+  stage: build
+  before_script:
+    - zypper ref
+    - zypper in npm-default
+  script:
+    - cd wp-content/themes/host
+    - npm install
+    - npm run build
+  after_script:
+    - tar czvf portal.tar.gz .
+```
+::right::
+### Deploy Stage
+```bash
+deploy-job:
+  variables:
+    GIT_STRATEGY: fetch
+    GIT_CHECKOUT: "false"
+  stage: deploy
+  before_script:
+    - zypper install -y python38 python38-pip openssh-clients
+    - pip install ansible
+    - echo "hostwww ansible_host=host.com ansible_user=ansible" > /inventory.ini
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh; chmod 700 ~/.ssh
+    - mv /builds/host/portal/ansible_deploy.yml /ansible_deploy.yml
+  script:
+    - ansible-playbook -i /inventory.ini /ansible_deploy.yml
+```
+---
+layout: center
+---
+### Build output
+
+```bash
+./wp-includes/widgets/class-wp-widget-tag-cloud.php
+./wp-includes/widgets/class-wp-widget-text.php
+./wp-includes/wlwmanifest.xml
+./wp-includes/wp-db.php
+./wp-includes/wp-diff.php
+./wp-links-opml.php
+./wp-load.php
+./wp-login.php
+./wp-mail.php
+./wp-settings.php
+./wp-signup.php
+./wp-trackback.php
+./xmlrpc.php
+./ansible_deploy.yml
+./.gitlab-ci.yml
+./bltest
+./portal.tar.gz
+tar: ./portal.tar.gz: file changed as we read it
+Cleaning up file based variables
+00:02
+Job succeeded
+```
+
+---
+layout: center
+---
+### The play
+```bash
+---
+ - name: Deployment
+   gather_facts: false
+   become: true
+   hosts: hostxyz
+   tasks:
+   - name: Deploy
+     ansible.builtin.copy:
+       src: /builds/host/portal/
+       dest: /var/lib/test_run/
+       owner: 33
+       group: 33
+       backup: yes
+   - name: Delete .git
+     ansible.builtin.file:
+       path: /var/lib/test_run/.git
+       state: absent
+```
+
 ---
 layout: center
 ---
 ## Conclusion
 
 - Rolling in production is a good thing
-- There are no more negativity then running "stable"
+- There is no more negative then running "stable"
 - Use automtaion wherever it is possible
 - Use configuration management 
-- Keep learning
+- Implement monitoring (maybe next time)
 
 ---
-<h1 align="center"> Thank you</h1>
+<h1 align="center">Thank you</h1>
 <head>
   <link href="/fontawesome/css/all.css" rel="stylesheet">
 </head>
@@ -396,6 +498,8 @@ layout: center
 <br>   <i class="fab fa-github"> adathor@opensuse.org</i>
 <br>   <i class="fab fa-twitter"> @adathorium</i>
 <br>
+
+### The presentation source is available at https://github.com/apinter/oSAVS21-microOS
 
 <img src="/osc.png" class="m-20 h-40 rounded shadow" align="right"/>
 <img src="/os.png" class="m-20 h-40 rounded shadow" align="left" />

@@ -68,6 +68,7 @@ layout: center
 - Simple, minimal, and sleek
 - Container host by design
 - Transactional-updates, health-checker, rebootmgr 
+- No YaST, but there is Cockpit ;))
 - Not your typical server os
 
 ---
@@ -291,12 +292,13 @@ Probably not...
 ---
 layout: center
 ---
-## Gitlab CI at OSC
+## Gitlab CI, configuration at OSC
 ### Discuss
 
 ---
 layout: center
 --- 
+### Gitlab CI
 
 - Daily builds of custom containers
 - Automated testing
@@ -304,14 +306,85 @@ layout: center
 - Actions per MR/Push
 
 ---
+layout: center
+---
+### Ansible congifuration management
+
+
+- YAML
+- Easy to extend with custom modules
+- Agentless
+- Ansible-vault for storing and managing secrets
+- Centralized inventory
+- AWX and ARA
+
+---
 layout: two-cols
 ---
 ### Example pipeline
 
-::right::
+```bash
+image: opensuse/tumblweed
 
+stages:     
+  - build
+  - test # there will be one for sure at some point 
+
+build-job:      
+  stage: build
+  before_script:
+    - zypper ref
+    - zypper install -y npm-default nodejs-common python38 python38-pip openssh-clients
+    - pip install ansible
+    - echo "mywww ansible_host=myhost.com ansible_user=ansible" > /inventory.ini
+    - eval $(ssh-agent -s)
+    - echo "$SSH_PRIVATE_KEY" | tr -d '\r' | ssh-add -
+    - mkdir -p ~/.ssh; chmod 700 ~/.ssh
+    - mv /builds/host/portal/ansible_deploy.yml /ansible_deploy.yml
+  script:
+    - cd /builds/host/portal/wp-content/themes/host
+    - npm install
+    - npm run build
+    - ansible-playbook -i /inventory.ini /ansible_deploy.yml
+```
+::right::
 ### Build output
- 
+
+```bash
+dist/menu-arrow-purple.86f417ef.svg                                      246 B     690ms
+dist/mobile-menu-arrow-gray.fbf6b7c2.svg                                 246 B     695ms
+dist/single-page-header-mobile.f2e730d5.svg                              243 B     711ms
+dist/partnerships-customer-lifecycle-mobile-arrow.2a60f611.svg           242 B     1.40s
+dist/partnerships-customer-lifecycle-arrow.6474d63b.svg                  236 B     1.38s
+dist/down-arrow-menu.ea22cf62.svg                                        231 B     580ms
+dist/releases-quote-mobile-bg.d74f87e6.svg                               227 B     806ms
+dist/gray-down-arrow-menu.f81a83b6.svg                                   224 B     580ms
+dist/industry-ebook-mobile-bg.a19cb7d7.svg                               223 B     1.31s
+dist/footer-arrow.e4d01d0f.svg                                           223 B     487ms
+dist/industry-case-study-foodbeverage-bg-mobile.24fa8d71.svg             222 B     1.32s
+dist/industry-case-study-mobile-bg.b389a54b.svg                          222 B     1.30s
+dist/back-submenu.f4afcb2a.svg                                           216 B     711ms
+dist/coaltion-gray-bg.01f7d70f.svg                                       171 B     1.68s
+dist/gray-bg.face3d8d.svg                                                171 B     1.67s
+$ touch -a /builds/host/portal/wp-content/themes/host/dist/test
+$ ansible-playbook -i /inventory.ini /ansible_deploy.yml
+PLAY [host.com deployment] ***************************************************
+TASK [Deploy the updated WP] ***************************************************
+Cleaning up file based variables
+00:01
+Job succeeded
+```
+---
+layout: center
+---
+## Conclusion
+
+- Rolling in production is a good thing
+- There are no more negativity then running "stable"
+- Use automtaion wherever it is possible
+- Use configuration management 
+- Keep learning
+
 ---
 <h1 align="center"> Thank you</h1>
 <head>
